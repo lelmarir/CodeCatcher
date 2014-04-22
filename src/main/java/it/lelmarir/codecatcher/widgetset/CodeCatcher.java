@@ -10,6 +10,7 @@ import com.vaadin.server.AbstractExtension;
 import it.lelmarir.codecatcher.widgetset.client.codecatcher.CodeCatcherState;
 
 public class CodeCatcher extends AbstractExtension {
+	private static final long serialVersionUID = -6642628661891252150L;
 
 	public interface CodeCatchedListener {
 		void onCodeCatch(CodeCatchedEvent event);

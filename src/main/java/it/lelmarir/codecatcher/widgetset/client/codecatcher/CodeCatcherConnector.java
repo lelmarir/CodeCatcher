@@ -1,27 +1,21 @@
 package it.lelmarir.codecatcher.widgetset.client.codecatcher;
 
-import java.util.logging.Logger;
+import it.lelmarir.codecatcher.widgetset.CodeCatcher;
 
 import com.google.gwt.user.client.Event;
-import com.google.gwt.user.client.Event.NativePreviewHandler;
 import com.google.gwt.user.client.Event.NativePreviewEvent;
-import com.vaadin.shared.ui.Connect;
-
-import it.lelmarir.codecatcher.widgetset.CodeCatcher;
-import it.lelmarir.codecatcher.widgetset.client.codecatcher.CodeCatcherServerRpc;
-
-import com.vaadin.client.communication.RpcProxy;
+import com.google.gwt.user.client.Event.NativePreviewHandler;
 import com.vaadin.client.ServerConnector;
-import com.vaadin.client.VConsole;
-
-import it.lelmarir.codecatcher.widgetset.client.codecatcher.CodeCatcherState;
-
+import com.vaadin.client.communication.RpcProxy;
+import com.vaadin.client.communication.StateChangeEvent;
 import com.vaadin.client.extensions.AbstractExtensionConnector;
+import com.vaadin.shared.ui.Connect;
 
 @Connect(CodeCatcher.class)
 public class CodeCatcherConnector extends AbstractExtensionConnector implements NativePreviewHandler {
+	private static final long serialVersionUID = 4550594626391658435L;
 
-	CodeCatcherServerRpc rpc = RpcProxy.create(CodeCatcherServerRpc.class, this);
+	private final CodeCatcherServerRpc rpc = RpcProxy.create(CodeCatcherServerRpc.class, this);
 	
 	private int codeStartKeyCode;
 	private int codeEndKeyCode;
@@ -32,7 +26,6 @@ public class CodeCatcherConnector extends AbstractExtensionConnector implements 
 	private String code = "";
 	
 	public CodeCatcherConnector() {
-		;
 	}
 	
 	@Override
@@ -54,7 +47,9 @@ public class CodeCatcherConnector extends AbstractExtensionConnector implements 
 					if (keyCode == codeEndKeyCode) {
 						this.isReadingCode = false;
 						event.cancel();
-						rpc.onCodeCatched(new CodeCatchedEvent(this.code));
+						CodeCatchedEvent codeCatchedEvent = new CodeCatchedEvent();
+						codeCatchedEvent.setCode(this.code);
+						rpc.onCodeCatched(codeCatchedEvent);
 					} else {
 						if (this.codeMaxLenght == 0
 								|| this.codeLength < this.codeMaxLenght) {
@@ -80,7 +75,6 @@ public class CodeCatcherConnector extends AbstractExtensionConnector implements 
 	}
 
 	public void setCodeStartKeyCode(int codeStartKeyCode) {
-		VConsole.log("codeStartKeyCode = " + codeStartKeyCode);
 		this.codeStartKeyCode = codeStartKeyCode;
 	}
 
@@ -108,5 +102,15 @@ public class CodeCatcherConnector extends AbstractExtensionConnector implements 
 		this.codeLength = codeLength;
 	}
 	
+	@Override
+	public void onStateChanged(StateChangeEvent stateChangeEvent) {
+		super.onStateChanged(stateChangeEvent);
+
+		CodeCatcherState state = this.getState();
+		this.codeStartKeyCode = state.codeStartKeyCode;
+		this.codeEndKeyCode = state.codeEndKeyCode;
+		this.codeMaxLenght = state.codeMaxLenght;
+	}
+
 }
 
