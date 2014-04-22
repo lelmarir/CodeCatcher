@@ -3,7 +3,8 @@ package it.lelmarir.codecatcher.widgetset.client.codecatcher;
 import com.vaadin.shared.annotations.DelegateToWidget;
 
 public class CodeCatcherState extends com.vaadin.shared.AbstractComponentState {
-
+	private static final long serialVersionUID = 2282111190660042420L;
+	
 	@DelegateToWidget
 	public int codeStartKeyCode;
 	@DelegateToWidget
