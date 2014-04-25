@@ -2,6 +2,7 @@ package it.lelmarir.codecatcher.widgetset.client.codecatcher;
 
 import it.lelmarir.codecatcher.widgetset.CodeCatcher;
 
+import com.google.gwt.event.shared.HandlerRegistration;
 import com.google.gwt.user.client.Event;
 import com.google.gwt.user.client.Event.NativePreviewEvent;
 import com.google.gwt.user.client.Event.NativePreviewHandler;
@@ -25,12 +26,20 @@ public class CodeCatcherConnector extends AbstractExtensionConnector implements 
 	private int codeLength = 0;
 	private String code = "";
 	
+	private HandlerRegistration handler;
+	
 	public CodeCatcherConnector() {
 	}
 	
 	@Override
 	protected void extend(ServerConnector target) {
-		Event.addNativePreviewHandler(this);
+		handler = Event.addNativePreviewHandler(this);
+	}
+	
+	@Override
+	public void onUnregister() {
+		handler.removeHandler();
+		super.onUnregister();		
 	}
 	
 	public void onPreviewNativeEvent(NativePreviewEvent event) {
