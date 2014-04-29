@@ -47,6 +47,9 @@ public class CodeCatcherConnector extends AbstractExtensionConnector implements 
 			int keyCode = -1;
 			if (event.getNativeEvent().getType().equals("keypress")) {
 				keyCode = event.getNativeEvent().getCharCode();
+				if(keyCode == 0){
+					keyCode = event.getNativeEvent().getKeyCode();
+				}
 				if (this.isReadingCode == false && keyCode == codeStartKeyCode) {
 					this.isReadingCode = true;
 					this.code = "";
