@@ -69,4 +69,16 @@ public class CodeCatcher extends AbstractExtension {
 		getState().codeMaxLenght = codeMaxLenght;
 	}
 	
+	public boolean isSkipFollowingReturn(){
+		return getState().isSkipFollowingReturn;
+	}
+	
+	/**
+	 * If active the first "Return"-key after the end of the scan-state will be skipped.
+	 * @param isSkip
+	 */
+	public void setSkipFollowingReturn(boolean isSkip){
+		getState().isSkipFollowingReturn = isSkip;
+	}
+	
 }

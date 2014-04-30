@@ -1,5 +1,7 @@
 package it.lelmarir.codecatcher.widgetset.client.codecatcher;
 
+import java.util.logging.Level;
+
 import it.lelmarir.codecatcher.widgetset.CodeCatcher;
 
 import com.google.gwt.event.shared.HandlerRegistration;
@@ -21,10 +23,12 @@ public class CodeCatcherConnector extends AbstractExtensionConnector implements 
 	private int codeStartKeyCode;
 	private int codeEndKeyCode;
 	private int codeMaxLenght = 0;
+	private boolean isSkipFollowingReturn = false;
 
 	private boolean isReadingCode = false;
 	private int codeLength = 0;
 	private String code = "";
+	private boolean isReadingJustEnded = false;
 	
 	private HandlerRegistration handler;
 	
@@ -50,6 +54,16 @@ public class CodeCatcherConnector extends AbstractExtensionConnector implements 
 				if(keyCode == 0){
 					keyCode = event.getNativeEvent().getKeyCode();
 				}
+				
+				if(this.isReadingJustEnded && this.isSkipFollowingReturn){
+					this.isReadingJustEnded = false;
+					// check if "Return"-key was pressed.
+					if(keyCode == 13){
+						event.cancel();
+						return;
+					}
+				}
+				
 				if (this.isReadingCode == false && keyCode == codeStartKeyCode) {
 					this.isReadingCode = true;
 					this.code = "";
@@ -58,6 +72,7 @@ public class CodeCatcherConnector extends AbstractExtensionConnector implements 
 				} else if (this.isReadingCode == true) {
 					if (keyCode == codeEndKeyCode) {
 						this.isReadingCode = false;
+						this.isReadingJustEnded = true;
 						event.cancel();
 						CodeCatchedEvent codeCatchedEvent = new CodeCatchedEvent();
 						codeCatchedEvent.setCode(this.code);
@@ -122,6 +137,7 @@ public class CodeCatcherConnector extends AbstractExtensionConnector implements 
 		this.codeStartKeyCode = state.codeStartKeyCode;
 		this.codeEndKeyCode = state.codeEndKeyCode;
 		this.codeMaxLenght = state.codeMaxLenght;
+		this.isSkipFollowingReturn = state.isSkipFollowingReturn;
 	}
 
 }
