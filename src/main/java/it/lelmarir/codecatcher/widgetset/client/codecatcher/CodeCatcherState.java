@@ -13,5 +13,7 @@ public class CodeCatcherState extends com.vaadin.shared.AbstractComponentState {
 	public int codeMaxLenght = 0;
 	@DelegateToWidget
 	public boolean isSkipFollowingReturn = false;
+	@DelegateToWidget
+	public boolean isAlwaysOn = false;
 
 }
