@@ -12,6 +12,8 @@ import com.vaadin.client.communication.StateChangeEvent;
 import com.vaadin.client.extensions.AbstractExtensionConnector;
 import com.vaadin.shared.ui.Connect;
 
+import elemental.events.KeyboardEvent.KeyCode;
+
 @Connect(CodeCatcher.class)
 public class CodeCatcherConnector extends AbstractExtensionConnector implements NativePreviewHandler {
 	private static final long serialVersionUID = 4550594626391658435L;
@@ -21,10 +23,13 @@ public class CodeCatcherConnector extends AbstractExtensionConnector implements 
 	private int codeStartKeyCode;
 	private int codeEndKeyCode;
 	private int codeMaxLenght = 0;
+	private boolean isSkipFollowingReturn = false;
+	private boolean isAlwaysOn = false;
 
 	private boolean isReadingCode = false;
 	private int codeLength = 0;
 	private String code = "";
+	private boolean isReadingJustEnded = false;
 	
 	private HandlerRegistration handler;
 	
@@ -42,76 +47,109 @@ public class CodeCatcherConnector extends AbstractExtensionConnector implements 
 		super.onUnregister();		
 	}
 	
+	@Override
 	public void onPreviewNativeEvent(NativePreviewEvent event) {
 		if (event.getNativeEvent().getType().contains("key")) {
-			int keyCode = -1;
-			if (event.getNativeEvent().getType().equals("keypress")) {
-				keyCode = event.getNativeEvent().getCharCode();
-				if(keyCode == 0){
-					keyCode = event.getNativeEvent().getKeyCode();
-				}
-				if (this.isReadingCode == false && keyCode == codeStartKeyCode) {
-					this.isReadingCode = true;
-					this.code = "";
-					this.codeLength = 0;
-					event.cancel();
-				} else if (this.isReadingCode == true) {
-					if (keyCode == codeEndKeyCode) {
-						this.isReadingCode = false;
-						event.cancel();
-						CodeCatchedEvent codeCatchedEvent = new CodeCatchedEvent();
-						codeCatchedEvent.setCode(this.code);
-						rpc.onCodeCatched(codeCatchedEvent);
+			
+			int charCode = -1;
+			if (event.getNativeEvent().getType().equals("keypress")) {		
+				charCode = event.getNativeEvent().getCharCode();
+				// check if a "function" key was pressed.
+				if(charCode == 0){
+					int keyCode = event.getNativeEvent().getKeyCode();
+					// remap enter and maybe other keys in the future.
+					if(keyCode == KeyCode.ENTER){
+						charCode = keyCode;
 					} else {
-						if (this.codeMaxLenght == 0
-								|| this.codeLength < this.codeMaxLenght) {
-							event.cancel();
-							this.code += (char) keyCode;
-						} else {
-							// errore, scarto il codice
-							this.isReadingCode = false;
-						}
+						return;
 					}
+					
+				}
+				
+				if(this.isReadingJustEnded && this.isSkipFollowingReturn){
+					this.isReadingJustEnded = false;
+					// check if "Return"-key was pressed.
+					if(charCode == KeyCode.ENTER){
+						event.cancel();
+						return;
+					}
+				}				
+				
+				if(this.isAlwaysOn){
+					processAlwaysOn(event, charCode);
+				} else {
+					processNormalMode(event, charCode);
+				}				
+			}
+		}
+	}
+
+	/**
+	 * Processing when intercepting all keys.
+	 * @param event
+	 * @param charCode
+	 */
+	private void processAlwaysOn(NativePreviewEvent event, int charCode) {
+		if (charCode == codeStartKeyCode) {
+			// reset buffer
+			this.code = "";
+		} else if (charCode == codeEndKeyCode) {
+			this.sendBufferToServer();
+			this.isReadingJustEnded = true;
+		} else if (charCode == KeyCode.ENTER) {
+			// send with codeEndKeyCode or Return
+			this.sendBufferToServer();
+		} else {
+			// default: append new char
+			this.code += (char) charCode;
+		}
+
+		event.cancel();
+	}
+
+
+	/**
+	 * Normal processing with start and end key
+	 * @param event
+	 * @param charCode
+	 */
+	private void processNormalMode(NativePreviewEvent event, int charCode){
+		if (!this.isReadingCode && charCode == codeStartKeyCode) {
+			this.isReadingCode = true;
+			event.cancel();
+			this.code = "";
+			this.codeLength = 0;
+		} else if (this.isReadingCode) {
+			if (charCode == codeEndKeyCode) {
+				this.isReadingCode = false;
+				this.isReadingJustEnded = true;
+				event.cancel();
+				this.sendBufferToServer();
+				this.codeLength = 0;
+			} else {
+				if (this.codeMaxLenght == 0
+						|| this.codeLength < this.codeMaxLenght) {
+					event.cancel();
+					this.code += (char) charCode;
+				} else {
+					// errore, scarto il codice
+					this.isReadingCode = false;
 				}
 			}
 		}
+	}
+	
+	
+	private void sendBufferToServer(){
+		CodeCatchedEvent serverEvent = new CodeCatchedEvent();
+		serverEvent.setCode(this.code);
+		rpc.onCodeCatched(serverEvent);
+		this.code = "";
 	}
 
 	@Override
 	public CodeCatcherState getState() {
 		return (CodeCatcherState) super.getState();
-	}
-
-	public int getCodeStartKeyCode() {
-		return codeStartKeyCode;
-	}
-
-	public void setCodeStartKeyCode(int codeStartKeyCode) {
-		this.codeStartKeyCode = codeStartKeyCode;
-	}
-
-	public int getCodeEndKeyCode() {
-		return codeEndKeyCode;
-	}
-
-	public void setCodeEndKeyCode(int codeEndKeyCode) {
-		this.codeEndKeyCode = codeEndKeyCode;
-	}
-
-	public int getCodeMaxLenght() {
-		return codeMaxLenght;
-	}
-
-	public void setCodeMaxLenght(int codeMaxLenght) {
-		this.codeMaxLenght = codeMaxLenght;
-	}
-
-	public int getCodeLength() {
-		return codeLength;
-	}
-
-	public void setCodeLength(int codeLength) {
-		this.codeLength = codeLength;
 	}
 	
 	@Override
@@ -122,6 +160,8 @@ public class CodeCatcherConnector extends AbstractExtensionConnector implements 
 		this.codeStartKeyCode = state.codeStartKeyCode;
 		this.codeEndKeyCode = state.codeEndKeyCode;
 		this.codeMaxLenght = state.codeMaxLenght;
+		this.isSkipFollowingReturn = state.isSkipFollowingReturn;
+		this.isAlwaysOn = state.isAlwaysOn;
 	}
 
 }
